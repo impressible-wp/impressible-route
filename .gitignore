@@ -1,0 +1,15 @@
+# Library should ignore lock files
+/composer.lock
+
+# Library should ignore vendor folder
+/vendor
+
+# Ignore Wordpress folder for test and developmemnt
+/test-wp
+
+# Ignore phpunit result cache
+/.phpunit.result.cache
+
+# Ignore coverage reports
+/coverage.xml
+/coverage.txt

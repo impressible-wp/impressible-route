@@ -1,0 +1,72 @@
+.tests:
+  stage: test
+  variables:
+    # supporess interative prompt from debian-based OS
+    DEBIAN_FRONTEND: noninteractive
+    XDEBUG_MODE: coverage
+  tags:
+    - git-annex
+  before_script:
+    # install apt packages
+    - apt-get update -qy
+    - apt-get install -qy git unzip zip
+
+    # install and enable xdebug
+    - pecl install xdebug
+    - docker-php-ext-enable xdebug
+
+    # properly setup php
+    - cp -pdf /usr/local/etc/php/php.ini-development /usr/local/etc/php/php.ini
+
+    # install composer
+    - |
+      # install composer
+      php -r "copy('https://getcomposer.org/installer', 'composer-setup.php');"
+      php -r "if (getenv('COMPOSER_CHECKSUM') === false) exit('No COMPOSER_CHECKSUM. Installer verification skipped.' . PHP_EOL); if (hash_file('SHA384', 'composer-setup.php') === getenv('COMPOSER_CHECKSUM')) { echo 'Installer verified'; } else { echo 'Installer corrupt'; unlink('composer-setup.php'); exit(1); } echo PHP_EOL;"
+      php composer-setup.php --install-dir=/usr/local/bin --filename=composer
+      php -r "unlink('composer-setup.php');"
+
+    # install dependencies for test
+    - composer install --prefer-dist --ansi --no-interaction --no-progress
+
+  script:
+    - composer test
+    - cat coverage.txt
+
+  # store test logs when fail.
+  artifacts:
+    paths:
+      - tests/log
+      - tests/configs
+    when: on_failure
+    expire_in: 1 week
+
+php:7.4:
+  image: php:7.4
+  extends: .tests
+
+php:8.0:
+  image: php:8.0
+  extends: .tests
+
+php:8.1:
+  image: php:8.1
+  extends: .tests
+
+packagist:
+  stage: deploy
+  image: php:8.1
+  script:
+  - echo "branch=$CI_DEFAULT_BRANCH commit=$CI_COMMIT_REF_NAME tag=$CI_COMMIT_TAG"
+  - export PACKAGIST_REQUEST=$(php -r 'echo json_encode(["repository" => ["url" => "https://packagist.org/packages/" . json_decode(file_get_contents("./composer.json"))->name]],  JSON_UNESCAPED_SLASHES);')
+  - echo $PACKAGIST_REQUEST
+  - >
+    curl -s -XPOST \
+        -H'content-type:application/json' \
+        "https://packagist.org/api/update-package?username=$PACKAGIST_USER&apiToken=$PACKAGIST_TOKEN" -d"$PACKAGIST_REQUEST" \
+      | php -r '$s = fopen("php://stdin", "r"); $c = stream_get_contents($s); $j = json_decode($c); if ($j->status === "success") exit("success"); echo $c; exit(1);'
+  rules:
+  - if: '($PACKAGIST_USER != "" && $PACKAGIST_TOKEN != "") && ($CI_DEFAULT_BRANCH == $CI_COMMIT_REF_NAME || $CI_COMMIT_TAG != null)'
+
+include:
+- template: Security/Dependency-Scanning.gitlab-ci.yml

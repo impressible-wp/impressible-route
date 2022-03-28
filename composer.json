@@ -1,0 +1,33 @@
+{
+    "name": "impressible/impressible-route",
+    "description": "A routing framework for coding modern PHP in Wordpress Plugin.",
+    "type": "library",
+    "license": "MIT",
+    "autoload": {
+        "psr-4": {
+            "Impressible\\ImpressibleRoute\\": "src/"
+        }
+    },
+    "authors": [
+        {
+            "name": "Koala Yeung",
+            "email": "koalay@gmail.com"
+        }
+    ],
+    "scripts": {
+        "dev:download:wp": "./vendor/bin/wp core download --path=./test-wp",
+        "test": "phpunit tests --colors=always  --coverage-text=coverage.txt --coverage-cobertura=coverage.xml"
+    },
+    "require": {
+        "php": ">=7.4",
+        "guzzlehttp/psr7": "^2.2",
+        "psr/container": "^2.0",
+        "psr/http-message": "^1.0",
+        "psr/http-factory": "^1.0"
+    },
+    "require-dev": {
+        "wp-cli/wp-cli-bundle": "*",
+        "phpunit/phpunit": "^9",
+        "phpunit/php-code-coverage": "^9.2"
+    }
+}
