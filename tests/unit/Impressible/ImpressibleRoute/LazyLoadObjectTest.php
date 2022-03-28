@@ -1,6 +1,5 @@
 <?php
-
-namespace Impressible\ImpressibleRouteTest;
+namespace Impressible\ImpressibleRoute;
 
 use Impressible\ImpressibleRoute\LazyLoadObject;
 use PHPUnit\Framework\TestCase;
@@ -9,8 +8,13 @@ use Psr\Container\ContainerInterface;
 /**
  * @covers \Impressible\ImpressibleRoute\LazyLoadObject
  */
-final class LazyLoadObjectTest extends TestCase
+class LazyLoadObjectTest extends TestCase
 {
+    /**
+     * @var \UnitTester
+     */
+    protected $tester;
+
     public function testCallMethod()
     {
         $mock = $this->getMockBuilder(\stdClass::class)

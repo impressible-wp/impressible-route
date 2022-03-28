@@ -1,6 +1,5 @@
-<?php declare(strict_types=1);
-
-namespace Impressible\ImpressibleRouteTest\Http;
+<?php
+namespace Impressible\ImpressibleRoute\Http;
 
 use GuzzleHttp\Psr7\Response;
 use Impressible\ImpressibleRoute\Http\Router;
@@ -10,8 +9,13 @@ use PHPUnit\Framework\TestCase;
 /**
  * @covers \Impressible\ImpressibleRoute\Http\Router
  */
-final class RouterTest extends TestCase
+class RouterTest extends TestCase
 {
+    /**
+     * @var \UnitTester
+     */
+    protected $tester;
+
     public function testRegisterRoutes()
     {
         /**
@@ -231,7 +235,7 @@ final class RouterTest extends TestCase
                 'X-Custom-Header: value1',
                 'X-Custom-Header: value2',
             ],
-            \xdebug_get_headers(),
+            call_user_func('xdebug_get_headers'),
             'The header sent should be the same as the PSR response header.'
         );
         $this->assertEquals(

@@ -16,7 +16,12 @@
     ],
     "scripts": {
         "dev:download:wp": "./vendor/bin/wp core download --path=./test-wp",
-        "test": "phpunit tests --colors=always  --coverage-text=coverage.txt --coverage-cobertura=coverage.xml"
+        "test:acceptance": "",
+        "test:unit": "phpunit tests --colors=always  --coverage-text=coverage.txt --coverage-cobertura=coverage.xml",
+        "test": [
+            "composer run test:unit",
+            "composer run test:acceptance"
+        ]
     },
     "require": {
         "php": ">=7.4",
@@ -27,7 +32,9 @@
     },
     "require-dev": {
         "wp-cli/wp-cli-bundle": "*",
-        "phpunit/phpunit": "^9",
-        "phpunit/php-code-coverage": "^9.2"
+        "phpunit/php-code-coverage": "^9.2",
+        "codeception/codeception": "^4.1",
+        "codeception/module-asserts": "^1.0",
+        "codeception/module-phpbrowser": "^2.0"
     }
 }

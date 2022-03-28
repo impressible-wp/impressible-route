@@ -1,6 +1,5 @@
 <?php
-
-namespace Impressible\ImpressibleRouteTest\Http;
+namespace Impressible\ImpressibleRoute\Http;
 
 use Impressible\ImpressibleRoute\Http\TemplatedResponse;
 use PHPUnit\Framework\TestCase;
@@ -8,8 +7,13 @@ use PHPUnit\Framework\TestCase;
 /**
  * @covers \Impressible\ImpressibleRoute\Http\TemplatedResponse
  */
-final class TemplatedResponseTest extends TestCase
+class TemplatedResponseTest extends TestCase
 {
+    /**
+     * @var \UnitTester
+     */
+    protected $tester;
+
     public function testGetFilename()
     {
         $n = rand(1, 100);
