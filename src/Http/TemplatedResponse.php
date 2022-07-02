@@ -3,34 +3,74 @@
 namespace Impressible\ImpressibleRoute\Http;
 
 /**
- * Represents a proper Wordpress template response.
+ * Represents a Wordpress response with query template.
+ * Resolves the template by calling get_query_template().
  * For using with the routing logics in this plugin.
+ *
+ * @see https://developer.wordpress.org/reference/functions/get_query_template/
  */
 class TemplatedResponse
 {
+
     /**
-     * Template basename to search for
+     * Filename without extension.
      *
      * @var string
      */
-    private $filename;
+    private $type;
 
     /**
-     * Constructor
+     * An optional list of template candidates.
      *
-     * @param string $filename       The filename of the template.
+     * @var string[]
      */
-    public function __construct(string $filename)
+    private $templates = [];
+
+    /**
+     * Class constructor.
+     *
+     * @param string   $type      Filename without extension.
+     * @param string[] $templates (Optional) An optional list of template candidates.
+     *                            Default value: array()
+     */
+    function __construct(string $type, array $templates = [])
     {
-        $this->filename = $filename;
+        $this->type = $type;
+        $this->templates = $templates;
     }
 
     /**
-     * Get the filename specified.
+     * Returns the HTTP status code to use for the
+     * response.
+     *
+     * @return integer
      */
-    public function getFilename(): string
+    function getStatus(): int
     {
-        return $this->filename;
+        return 200;
+    }
+
+    /**
+     * Returns a full path to template file from get_query_template().
+     * Or null if get_query_template() is not a defined function.
+     *
+     * @return string|null
+     */
+    function getTemplate(): ?string
+    {
+        return function_exists('get_query_template')
+            ? get_query_template($this->type, $this->templates)
+            : null;
+    }
+
+    /**
+     * Get template filename specified.
+     *
+     * @return string
+     */
+    function getFilename(): string
+    {
+        return $this->type . '.php';
     }
 
     /**

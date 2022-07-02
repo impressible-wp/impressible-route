@@ -62,12 +62,6 @@ class Router
     private $templateDir;
 
     /**
-     * The filename prefix for site theme to implement
-     * template for the plugin of the same name.
-     */
-    private $templateOverridePrefix;
-
-    /**
      * Constructor.
      *
      * @param \WP_Rewrite $wp_rewrite              The Wordpress WP_Rewrite object.
@@ -76,23 +70,18 @@ class Router
      *                                             Just make sure this is not a query variable name
      *                                             you'd use elsewhere in your Wordpress.
      * @param string     $templateDir              The directory to find plugin templates.
-     * @param string     $templateOverridePrefix   (Optional) The filename prefix for template file site
-     *                                             theme to override the plugin's template.
-     *                                             Default value: ''
      */
     public function __construct(
         $wp_rewrite,
         $wp_query,
         string $queryVarName,
-        string $templateDir,
-        string $templateOverridePrefix = ''
+        string $templateDir
     )
     {
         $this->wpRewrite = $wp_rewrite;
         $this->wpQuery = $wp_query;
         $this->queryVarName = $queryVarName;
         $this->templateDir = rtrim($templateDir, DIRECTORY_SEPARATOR);
-        $this->templateOverridePrefix = $templateOverridePrefix;
     }
 
     /**
@@ -288,7 +277,7 @@ class Router
     /**
      * Handle response from a route callback.
      *
-     * @param ResponseInterface|TemplatedResponse|NotFoundResponse|string $response  Response from callback.
+     * @param ResponseInterface|TemplatedResponse|string $response  Response from callback.
      *
      * @return string|false  The template string to use
      */
@@ -317,26 +306,13 @@ class Router
             return false;
         }
 
-        // The response is a usual wordpress templated pages.
-        // Will do the supposed response for the template_include hook
-        // (i.e. full path to the template file)
+        // Return the templated response.
         if ($response instanceof TemplatedResponse) {
-
-            // Find override template from themes (i.e. parent theme + child theme)
-            if (
-                function_exists('locate_template')
-                && ($overridePath = call_user_func('locate_template', $this->templateOverridePrefix . $response->getFilename())) != ''
-            ) {
-                return $overridePath;
-            }
-
-            return $this->templateDir . DIRECTORY_SEPARATOR . $response->getFilename();
-        }
-
-        // The response is a standard wordpress 404 response.
-        if ($response instanceof QueryTemplateResponse) {
-            status_header($response->getStatus());
-            return $response->getTemplate();
+            $wp_template = $response->getTemplate();
+            http_response_code($response->getStatus());
+            return (!empty($wp_template) && is_file($wp_template))
+                ? $wp_template
+                : $this->templateDir . DIRECTORY_SEPARATOR . $response->getFilename();
         }
 
         // For whatever else, return it as a string and exit Wordpress environment.

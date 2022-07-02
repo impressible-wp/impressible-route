@@ -279,7 +279,7 @@ class RouterTest extends TestCase
         $return = $router->handleResponse($response);
         $bufferedOutput = ob_get_clean();
 
-        $this->assertEquals($return, 'some/system/template-dir/my-template-file', 'The return value of handleResponse should be the full path to the supposed template.');
+        $this->assertEquals('some/system/template-dir/my-template-file.php', $return, 'The return value of handleResponse should be the full path to the supposed template.');
         $this->assertEmpty($bufferedOutput, 'There should be no other output.');
     }
 }
