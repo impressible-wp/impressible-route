@@ -334,15 +334,9 @@ class Router
         }
 
         // The response is a standard wordpress 404 response.
-        if ($response instanceof NotFoundResponse) {
-            status_header(404);
-            if (function_exists('get_404_template')) {
-                return get_404_template();
-            }
-
-            // fallback to simple 404 response text.
-            echo '404 Not Found';
-            return false;
+        if ($response instanceof QueryTemplateResponse) {
+            status_header($response->getStatus());
+            return $response->getTemplate();
         }
 
         // For whatever else, return it as a string and exit Wordpress environment.
