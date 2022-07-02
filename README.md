@@ -78,6 +78,7 @@ Wordpress way, or the PSR server request / response way:
 ```php
 
 use Impressible\ImpressibleRoute\Http\TemplatedResponse;
+use Impressible\ImpressibleRoute\Http\NotFoundResponse;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Message\ResponseInterface;
 use GuzzleHttp\Psr7\Response;
@@ -98,11 +99,7 @@ class MyController
        */
       $query = $request->getAttribute('wp_query');
       if (!$query->have_posts()) {
-        return new Response(
-          404,
-          ['Content-Type' => 'text/html'],
-          'Not Found'
-        );
+        return new NotFoundResponse();
       }
       $post = $query->next_post();
       return new Response(

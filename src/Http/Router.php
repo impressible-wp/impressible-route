@@ -288,7 +288,7 @@ class Router
     /**
      * Handle response from a route callback.
      *
-     * @param ResponseInterface|TemplatedResponse|string $response  Response from callback.
+     * @param ResponseInterface|TemplatedResponse|NotFoundResponse|string $response  Response from callback.
      *
      * @return string|false  The template string to use
      */
@@ -331,6 +331,18 @@ class Router
             }
 
             return $this->templateDir . DIRECTORY_SEPARATOR . $response->getFilename();
+        }
+
+        // The response is a standard wordpress 404 response.
+        if ($response instanceof NotFoundResponse) {
+            status_header(404);
+            if (function_exists('get_404_template')) {
+                return get_404_template();
+            }
+
+            // fallback to simple 404 response text.
+            echo '404 Not Found';
+            return false;
         }
 
         // For whatever else, return it as a string and exit Wordpress environment.
