@@ -242,7 +242,8 @@ class Router
         }
 
         // Generate request object from globals.
-        $request = ServerRequest::fromGlobals();
+        $request = ServerRequest::fromGlobals()
+            ->withAttribute('wp_query', $this->wpQuery);
 
         // Use the callback found to handle the request.
         // If it returns a string, assume it is template filename and pass along.

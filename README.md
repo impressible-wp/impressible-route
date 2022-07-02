@@ -52,9 +52,14 @@ function my_plugin_register_routes() {
       )
       ->addRoute('mycontent$', [$controller, 'handleContentIndex']);
       ->addRoute(
-         'mycontent/media/(\d+)$',
+         'mycontent/mymedia/(\d+)$',
          [$controller, 'handleMediaEndpoint'],
-         ['media_id' => '$matches[1]'],
+         // Define query arguments supplied to the global \WP_Query
+         // that will be passed to the controller method.
+         [
+            'post_id' => '$matches[1]',
+            'post_type' => 'mymedia',
+        ],
       )
       ->registerRoutes();
 
@@ -86,12 +91,24 @@ class MyController
       return new TemplatedResponse('content-index.php');
    }
 
-   public function handleArticlePage(ServerRequestInterface $request)
+   public function handleMediaEndpoint(ServerRequestInterface $request)
    {
+      /**
+       * @var \WP_Query
+       */
+      $query = $request->getAttribute('wp_query');
+      if (!$query->have_posts()) {
+        return new Response(
+          404,
+          ['Content-Type' => 'text/html'],
+          'Not Found'
+        );
+      }
+      $post = $query->next_post();
       return new Response(
          200,
-         ['Content-Type' => 'audio/mpeg']
-         fopen('example.mp3', 'r')
+         ['Content-Type' => $post->mymedia_content_type],
+         fopen($post->mymedia_content, 'r')
       );
    }
 }
