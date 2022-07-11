@@ -309,7 +309,7 @@ class Router
         // Return the templated response.
         if ($response instanceof TemplatedResponse) {
             $wp_template = $response->getTemplate();
-            http_response_code($response->getStatus());
+            http_response_code($response->getStatusCode());
             return (!empty($wp_template) && is_file($wp_template))
                 ? $wp_template
                 : $this->templateDir . DIRECTORY_SEPARATOR . $response->getFilename();

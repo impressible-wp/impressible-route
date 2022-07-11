@@ -19,7 +19,7 @@ class NotFoundResponse extends TemplatedResponse
     /**
      * {@inheritDoc}
      */
-    function getStatus(): int
+    function getStatusCode(): int
     {
         return 404;
     }

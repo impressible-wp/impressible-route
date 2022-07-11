@@ -45,7 +45,7 @@ class TemplatedResponse
      *
      * @return integer
      */
-    function getStatus(): int
+    function getStatusCode(): int
     {
         return 200;
     }
