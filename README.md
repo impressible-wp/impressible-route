@@ -61,8 +61,8 @@ function my_plugin_register_routes() {
             'post_type' => 'mymedia',
         ],
       )
-      ->registerRoutes()
-      ->addFilters();
+      // register the router methods to the Wordpress environment.
+      ->register();
 }
 add_action('init', 'my_plugin_register_routes');
 ```

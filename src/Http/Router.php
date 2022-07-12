@@ -172,6 +172,18 @@ class Router
      * To register everything necessary to the Wordpress ecosystem for the
      * routing to work.
      *
+     * @return self
+     */
+    public function register()
+    {
+        return $this
+            ->registerRoutes()
+            ->addFilters();
+    }
+
+    /**
+     * To register rewrite rules to the Wordpress WP_Rewrite object.
+     *
      * Please note that whenever routing is updated, you'll need to "Save" again
      * in the "Options" > "Permlink" to make changes effective. Or the Wordpress
      * will stick to the old cached routings.
@@ -204,7 +216,9 @@ class Router
     public function addFilters($callable = 'add_filter')
     {
         if (!is_callable($callable)) {
-            throw new \Exception('unable to find function "add_filter".');
+            throw new \Exception(is_string($callable)
+                ? "unable to find function \"{$callable}\"."
+                : 'unable to use $callable as callable.');
         }
 
         // Will whitelist the queryVarName for handleRoute to reference.
