@@ -57,7 +57,7 @@ class Router
     /**
      * The plugin's template directory.
      *
-     * @var string
+     * @var string|null
      */
     private $templateDir;
 
@@ -75,13 +75,15 @@ class Router
         $wp_rewrite,
         $wp_query,
         string $queryVarName,
-        string $templateDir
+        ?string $templateDir = null
     )
     {
         $this->wpRewrite = $wp_rewrite;
         $this->wpQuery = $wp_query;
         $this->queryVarName = $queryVarName;
-        $this->templateDir = rtrim($templateDir, DIRECTORY_SEPARATOR);
+        $this->templateDir = is_null($templateDir)
+            ? null
+            : rtrim($templateDir, DIRECTORY_SEPARATOR);
     }
 
     /**
@@ -89,13 +91,22 @@ class Router
      * the environment.
      *
      * @param string $queryVarName
-     * @param string $templateDir
+     *     The variable name for passing on the route slug.
+     *     Be careful not to use any variable already used in the
+     *     wordpress installation.
+     * @param string|null $templateDir (Optional)
+     *     The directory for template suggestion. If a
+     *     TemplatedResponse specifies a template type that
+     *     does not exists in the theme (child theme and parent theme)
+     *     folder, then router will attempt to load template here.
+     *     If set to null, then no extra template suggestion is done.
+     *     Default: null
      *
      * @return Router
      */
     public static function fromEnvironment(
         string $queryVarName,
-        string $templateDir
+        ?string $templateDir = null
     ): Router
     {
         global $wp_rewrite, $wp_query;
@@ -307,9 +318,16 @@ class Router
         if ($response instanceof TemplatedResponse) {
             $wp_template = $response->getTemplate();
             http_response_code($response->getStatusCode());
-            return (!empty($wp_template) && is_file($wp_template))
-                ? $wp_template
-                : $this->templateDir . DIRECTORY_SEPARATOR . $response->getFilename();
+
+            // Wordpress default template search behaviour.
+            if (!empty($wp_template) && is_file($wp_template)) {
+                return $wp_template;
+            }
+
+            // If template directory is specified, do extra template search.
+            if (!empty($this->templateDir)) {
+                return $this->templateDir . DIRECTORY_SEPARATOR . $response->getFilename();
+            }
         }
 
         // For whatever else, return it as a string and exit Wordpress environment.
