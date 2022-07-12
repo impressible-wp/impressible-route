@@ -90,14 +90,12 @@ class Router
      *
      * @param string $queryVarName
      * @param string $templateDir
-     * @param string $templateOverridePrefix
      *
      * @return Router
      */
     public static function fromEnvironment(
         string $queryVarName,
-        string $templateDir,
-        string $templateOverridePrefix = ''
+        string $templateDir
     ): Router
     {
         global $wp_rewrite, $wp_query;
@@ -105,8 +103,7 @@ class Router
             $wp_rewrite,
             $wp_query,
             $queryVarName,
-            $templateDir,
-            $templateOverridePrefix
+            $templateDir
         );
     }
 
