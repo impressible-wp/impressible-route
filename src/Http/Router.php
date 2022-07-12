@@ -191,6 +191,32 @@ class Router
     }
 
     /**
+     * Add the methods of this router as propert filters to the
+     * current wordpress environment.
+     *
+     * Essential for the query_vars based routing to work.
+     *
+     * @param callable $callable (Optional) Specify the callable
+     *     to add filters with. Default: 'add_filter'.
+     *
+     * @return self
+     */
+    public function addFilters($callable = 'add_filter')
+    {
+        if (!is_callable($callable)) {
+            throw new \Exception('unable to find function "add_filter".');
+        }
+
+        // Will whitelist the queryVarName for handleRoute to reference.
+        $callable('query_vars', [$this, 'keepQueryVar']);
+
+        // Will handle the routing.
+        $callable('template_include', [$this, 'handleRoute']);
+
+        return $this;
+    }
+
+    /**
      * Returns an array of variable to be whitelisted.
      * An implementation of Wordpress's query_vars filter.
      *
