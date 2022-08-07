@@ -61,13 +61,8 @@ function my_plugin_register_routes() {
             'post_type' => 'mymedia',
         ],
       )
-      ->registerRoutes();
-
-   // Will whitelist the queryVarName for handleRoute to reference.
-   add_filter('query_vars', [$router, 'keepQueryVar']);
-
-   // Will handle the routing.
-   add_filter('template_include', [$router, 'handleRoute']);
+      // register the router methods to the Wordpress environment.
+      ->register();
 }
 add_action('init', 'my_plugin_register_routes');
 ```

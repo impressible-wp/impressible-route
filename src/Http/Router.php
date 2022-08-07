@@ -57,7 +57,7 @@ class Router
     /**
      * The plugin's template directory.
      *
-     * @var string
+     * @var string|null
      */
     private $templateDir;
 
@@ -75,13 +75,15 @@ class Router
         $wp_rewrite,
         $wp_query,
         string $queryVarName,
-        string $templateDir
+        ?string $templateDir = null
     )
     {
         $this->wpRewrite = $wp_rewrite;
         $this->wpQuery = $wp_query;
         $this->queryVarName = $queryVarName;
-        $this->templateDir = rtrim($templateDir, DIRECTORY_SEPARATOR);
+        $this->templateDir = is_null($templateDir)
+            ? null
+            : rtrim($templateDir, DIRECTORY_SEPARATOR);
     }
 
     /**
@@ -89,15 +91,22 @@ class Router
      * the environment.
      *
      * @param string $queryVarName
-     * @param string $templateDir
-     * @param string $templateOverridePrefix
+     *     The variable name for passing on the route slug.
+     *     Be careful not to use any variable already used in the
+     *     wordpress installation.
+     * @param string|null $templateDir (Optional)
+     *     The directory for template suggestion. If a
+     *     TemplatedResponse specifies a template type that
+     *     does not exists in the theme (child theme and parent theme)
+     *     folder, then router will attempt to load template here.
+     *     If set to null, then no extra template suggestion is done.
+     *     Default: null
      *
      * @return Router
      */
     public static function fromEnvironment(
         string $queryVarName,
-        string $templateDir,
-        string $templateOverridePrefix = ''
+        ?string $templateDir = null
     ): Router
     {
         global $wp_rewrite, $wp_query;
@@ -105,8 +114,7 @@ class Router
             $wp_rewrite,
             $wp_query,
             $queryVarName,
-            $templateDir,
-            $templateOverridePrefix
+            $templateDir
         );
     }
 
@@ -164,6 +172,18 @@ class Router
      * To register everything necessary to the Wordpress ecosystem for the
      * routing to work.
      *
+     * @return self
+     */
+    public function register()
+    {
+        return $this
+            ->registerRoutes()
+            ->addFilters();
+    }
+
+    /**
+     * To register rewrite rules to the Wordpress WP_Rewrite object.
+     *
      * Please note that whenever routing is updated, you'll need to "Save" again
      * in the "Options" > "Permlink" to make changes effective. Or the Wordpress
      * will stick to the old cached routings.
@@ -179,6 +199,34 @@ class Router
             $query = [$this->queryVarName => $routeSlug] + $query;
             $this->wpRewrite->add_rule($regex, $query, $after);
         }
+        return $this;
+    }
+
+    /**
+     * Add the methods of this router as propert filters to the
+     * current wordpress environment.
+     *
+     * Essential for the query_vars based routing to work.
+     *
+     * @param callable $callable (Optional) Specify the callable
+     *     to add filters with. Default: 'add_filter'.
+     *
+     * @return self
+     */
+    public function addFilters($callable = 'add_filter')
+    {
+        if (!is_callable($callable)) {
+            throw new \Exception(is_string($callable)
+                ? "unable to find function \"{$callable}\"."
+                : 'unable to use $callable as callable.');
+        }
+
+        // Will whitelist the queryVarName for handleRoute to reference.
+        $callable('query_vars', [$this, 'keepQueryVar']);
+
+        // Will handle the routing.
+        $callable('template_include', [$this, 'handleRoute']);
+
         return $this;
     }
 
@@ -309,10 +357,17 @@ class Router
         // Return the templated response.
         if ($response instanceof TemplatedResponse) {
             $wp_template = $response->getTemplate();
-            http_response_code($response->getStatus());
-            return (!empty($wp_template) && is_file($wp_template))
-                ? $wp_template
-                : $this->templateDir . DIRECTORY_SEPARATOR . $response->getFilename();
+            http_response_code($response->getStatusCode());
+
+            // Wordpress default template search behaviour.
+            if (!empty($wp_template) && is_file($wp_template)) {
+                return $wp_template;
+            }
+
+            // If template directory is specified, do extra template search.
+            if (!empty($this->templateDir)) {
+                return $this->templateDir . DIRECTORY_SEPARATOR . $response->getFilename();
+            }
         }
 
         // For whatever else, return it as a string and exit Wordpress environment.

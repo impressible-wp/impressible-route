@@ -54,6 +54,50 @@ class RouterTest extends TestCase
             ->registerRoutes();
     }
 
+    public function testAddFilters()
+    {
+        /**
+         * @see https://developer.wordpress.org/reference/classes/wp_rewrite/
+         */
+        $wp_rewrite = $this->getMockBuilder(\stdClass::class)
+            ->addMethods(['add_rule'])
+            ->getMock();
+
+        /**
+         * @see https://developer.wordpress.org/reference/classes/wp_query/
+         */
+        $wp_query = $this->getMockBuilder(\stdClass::class)
+            ->getMock();
+
+        // Variable name to use for routing.
+        $varName = 'test_var_' . rand(1,100);
+
+        /**
+         * A dummy mock up for storing ahd examining variables received.
+         */
+        $filters = new class {
+            public $items = [];
+            public function add($name, $callable) {
+                $this->items[$name][] = $callable;
+            }
+        };
+
+        // do addRoute and registerRoutes routine.
+        $router = (new Router(
+            $wp_rewrite,
+            $wp_query,
+            $varName
+        ))->addFilters([$filters, 'add']);
+
+        $this->assertArrayHasKey('query_vars', $filters->items);
+        $this->assertContainsEquals([$router, 'keepQueryVar'], $filters->items['query_vars'],
+            'addFilters should add method "keepQueryVar" as filter "query_vars"');
+
+        $this->assertArrayHasKey('template_include', $filters->items);
+        $this->assertContainsEquals([$router, 'handleRoute'], $filters->items['template_include'],
+            'addFilters should add method "handleRoute" as filter "template_include"');
+    }
+
     public function testKeepQueryVar()
     {
         /**
