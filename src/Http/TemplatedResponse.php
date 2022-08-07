@@ -58,8 +58,8 @@ class TemplatedResponse
      */
     function getTemplate(): ?string
     {
-        return function_exists('get_query_template')
-            ? get_query_template($this->type, $this->templates)
+        return \function_exists('get_query_template')
+            ? \get_query_template($this->type, $this->templates)
             : null;
     }
 
