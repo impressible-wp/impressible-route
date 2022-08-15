@@ -107,6 +107,96 @@ class MyController
 
 ```
 
+### Admin Interface Routing
+
+We also support admin page routing in a similar manner with the "admin_menu" and
+"admin_init" hooks.
+
+```php
+use Impressible\ImpressibleRoute\Http\AdminRouter;
+use Impressible\ImpressibleRoute\Http\AdminRoute;
+use Impressible\ImpressibleRoute\LazyLoadObject;
+
+require __DIR__ . '/vendor/autoload.php';
+
+function my_plugin_register_admin_routes() {
+   /**
+    * @var \wpdb $wpdb
+    */
+   global $wpdb;
+
+   // Lazyload a MyController that, for demo purpose only, somehow need to use wpdb.
+   $controller = new LazyLoadObject(fn() => new MyAdminController($wpdb));
+
+   // Create a router instance and register routes with it.
+   $router = new AdminRouter()
+      ->addRoute(AdminRoute::menu(
+        'My Admin Section',
+        'My Section',
+        'some-capability',
+        'menu_slug_1',
+        [$controller, 'handleAdminSection'],
+        'icon-1',
+        1 // position
+      ))
+      ->addRoute(AdminRoute::menu(
+        'menu_slug_1',
+        'My Admin Sub-section',
+        'My Subection',
+        'some-capability',
+        'menu_slug_2',
+        [$controller, 'handleAdminSubection'],
+        1 // position
+      ));
+      // register the router methods to the Wordpress environment.
+      ->register();
+}
+add_action('admin_menu', 'my_plugin_register_admin_routes');
+```
+
+In your MyAdminController, you have the flexibility:
+
+```php
+
+use Impressible\ImpressibleRoute\Http\TemplatedResponse;
+use Impressible\ImpressibleRoute\Http\NotFoundResponse;
+use Psr\Http\Message\ServerRequestInterface;
+use Psr\Http\Message\ResponseInterface;
+use GuzzleHttp\Psr7\Response;
+
+class MyAdminController
+{
+   ...
+    public function handleAdminSection(ServerRequestInterface $request)
+    {
+        // For ordinary admin page responses.
+        return new AdminPageResponse(function () use ($request) {
+            // The code here will be delayed to execute the time
+            // ordinarly Wordpress admin menu callback is run.
+            require 'some/path/some/script.php';
+        });
+    }
+
+    public function handleAdminSubection(ServerRequestInterface $request)
+    {
+        // For export or other pages without dashboard top bar and sidebar.
+        // This will be executed when admin_init hook is run.
+        return new Response(
+            200,
+            [
+                'Content-Type' => 'application/json',
+            ],
+            json_encode([
+                'status' => 'success',
+                'msg' => 'Successful API call',
+            ])
+        );
+    }
+
+}
+
+```
+
 
 ## License
 
