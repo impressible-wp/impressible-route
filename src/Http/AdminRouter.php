@@ -100,7 +100,7 @@ class AdminRouter
      */
     private function getRouteSlug(): string
     {
-        return $_GET['page'];
+        return $_GET['page'] ?? '';
     }
 
     /**
