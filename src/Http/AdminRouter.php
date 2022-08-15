@@ -2,6 +2,7 @@
 
 namespace Impressible\ImpressibleRoute\Http;
 
+use GuzzleHttp\Psr7\ServerRequest;
 use Psr\Http\Message\ResponseInterface;
 
 class AdminRouter
@@ -59,7 +60,9 @@ class AdminRouter
             return;
         }
 
-        $response = $callable();
+        // Generate request object from globals.
+        $request = ServerRequest::fromGlobals();
+        $response = $callable($request);
         if ($response instanceof AdminPageResponse) {
             $this->adminResponse = $response;
             return;
