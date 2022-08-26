@@ -49,6 +49,15 @@ class Route
     private $after = 'top';
 
     /**
+     * The callable for the pre_get_posts hook.
+     *
+     * @see https://developer.wordpress.org/reference/hooks/pre_get_posts/
+     *
+     * @var callable|null
+     */
+    private $preGetPostCallable = null;
+
+    /**
      * Class constc
      *
      * @param string      $regex     Regular expression to match request against.
@@ -168,6 +177,39 @@ class Route
             $this->routeSlug,
             $this->after
         );
+        return $instance;
+    }
+
+    /**
+     * Retrieve the pre_get_posts hook function for
+     * the route, if any.
+     *
+     * @return callable|null
+     */
+    public function getPreGetPost(): ?callable
+    {
+        return $this->preGetPostCallable;
+    }
+
+    /**
+     * With a pre_get_posts hook callable.
+     *
+     * Triggers only when the route matches current request.
+     *
+     * @param callable $callable
+     *
+     * @return Route
+     */
+    public function withPreGetPost(callable $callable)
+    {
+        $instance = new static(
+            $this->regex,
+            $this->callable,
+            $this->query,
+            $this->routeSlug,
+            $this->after
+        );
+        $instance->preGetPostCallable = $callable;
         return $instance;
     }
 }

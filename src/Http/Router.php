@@ -252,6 +252,29 @@ class Router
     }
 
     /**
+     * Add the methods of this router as proper action hooks
+     * to the current wordpress environment.
+     *
+     * Essential for pre_get_posts query rewrite.
+     *
+     * @param callable $callable Optional callable to add
+     *     hooks with. Default: 'add_action'.
+     *
+     * @return self
+     */
+    public function addActions($callable = 'add_action')
+    {
+        if (!is_callable($callable)) {
+            throw new \Exception(is_string($callable)
+                ? "unable to find function \"{$callable}\"."
+                : 'unable to use $callable as callable.');
+        }
+
+        $callable('pre_get_posts', [$this, 'handlePreGetPosts']);
+        return $this;
+    }
+
+    /**
      * Returns an array of variable to be whitelisted.
      * An implementation of Wordpress's query_vars filter.
      *
@@ -310,6 +333,32 @@ class Router
            exit();
         }
         return $template;
+    }
+
+    /**
+     * Implements pre_get_posts hook of Wordpress.
+     *
+     * Triggers side-effect to \WP_Query before getting post with it.
+     *
+     * @param \WP_Query $query
+     *
+     * @return void
+     */
+    public function handlePreGetPosts(\WP_Query $query)
+    {
+        // If no route callback is found,
+        // simply return the default $template.
+        if (($route = $this->dispatch($this->getRouteSlug())) === null) {
+            return;
+        }
+
+        // If there is no pre_get_posts callable on the route, do nothing.
+        if (($callable = $route->getPreGetPost()) === null) {
+            return;
+        }
+
+        // Run the hook callable.
+        $callable($query);
     }
 
     /**

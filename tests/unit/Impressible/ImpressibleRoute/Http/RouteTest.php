@@ -89,4 +89,33 @@ class RouteTest extends TestCase
         $this->assertEquals($routeSlug, $route2->getRouteSlug());
         $this->assertSame($callable, $route2->getCallable());
     }
+
+    public function testWithPreGetPosts()
+    {
+        $regex = 'regex-' . rand(1, 100);
+        $callable = fn() => null;
+        $query = ['key-' . rand(1, 100) => 'value-' . rand(1, 100)];
+        $routeSlug = 'route-slug-' . rand(1, 100);
+        $after = 'after-' . rand(1, 100);
+        $preGetPostCallable = fn() => null;
+
+        $route1 = new Route(
+            $regex,
+            $callable,
+            $query,
+            $routeSlug,
+            $after
+        );
+        $route2 = $route1->withPreGetPost($preGetPostCallable);
+
+        // Check route2 changed and route1 not affected.
+        $this->assertNull($route1->getPreGetPost());
+        $this->assertSame($preGetPostCallable, $route2->getPreGetPost());
+
+        // Check route2 retains route1 values.
+        $this->assertEquals([$regex, $query, $after], $route2->getRewriteRuleParams());
+        $this->assertEquals($query, $route2->getQuery());
+        $this->assertEquals($routeSlug, $route2->getRouteSlug());
+        $this->assertSame($callable, $route2->getCallable());
+    }
 }

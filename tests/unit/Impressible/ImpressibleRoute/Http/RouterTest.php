@@ -55,6 +55,46 @@ class RouterTest extends TestCase
             ->registerRoutes();
     }
 
+    public function testAddActions()
+    {
+        /**
+         * @see https://developer.wordpress.org/reference/classes/wp_rewrite/
+         */
+        $wp_rewrite = $this->getMockBuilder(\stdClass::class)
+            ->addMethods(['add_rule'])
+            ->getMock();
+
+        /**
+         * @see https://developer.wordpress.org/reference/classes/wp_query/
+         */
+        $wp_query = $this->getMockBuilder(\stdClass::class)
+            ->getMock();
+
+        /**
+         * A dummy mock up for storing ahd examining variables received.
+         */
+        $actions = new class {
+            public $items = [];
+            public function add($name, $callable) {
+                $this->items[$name][] = $callable;
+            }
+        };
+
+        // Variable name to use for routing.
+        $varName = 'test_var_' . rand(1,100);
+
+        // do addRoute and registerRoutes routine.
+        $router = (new Router(
+            $wp_rewrite,
+            $wp_query,
+            $varName
+        ))->addActions([$actions, 'add']);
+
+        $this->assertArrayHasKey('pre_get_posts', $actions->items);
+        $this->assertContainsEquals([$router, 'handlePreGetPosts'], $actions->items['pre_get_posts'],
+            'addActions should add method "handlePreGetPosts" to action hook "pre_get_posts"');
+    }
+
     public function testAddFilters()
     {
         /**
