@@ -8,6 +8,7 @@ use PHPUnit\Framework\TestCase;
 
 /**
  * @covers \Impressible\ImpressibleRoute\Http\Router
+ * @covers \Impressible\ImpressibleRoute\Http\Route
  */
 class RouterTest extends TestCase
 {
@@ -49,9 +50,49 @@ class RouterTest extends TestCase
                 $varName,
                 'template'
             ))
-            ->addRoute('mycontents$', fn() => null)
-            ->addRoute('mymemories/(\d+)$', fn() => null, ['mid' => '$matches[0]'])
+            ->add(new Route('mycontents$', fn() => null))
+            ->add(new Route('mymemories/(\d+)$', fn() => null, ['mid' => '$matches[0]']))
             ->registerRoutes();
+    }
+
+    public function testAddActions()
+    {
+        /**
+         * @see https://developer.wordpress.org/reference/classes/wp_rewrite/
+         */
+        $wp_rewrite = $this->getMockBuilder(\stdClass::class)
+            ->addMethods(['add_rule'])
+            ->getMock();
+
+        /**
+         * @see https://developer.wordpress.org/reference/classes/wp_query/
+         */
+        $wp_query = $this->getMockBuilder(\stdClass::class)
+            ->getMock();
+
+        /**
+         * A dummy mock up for storing ahd examining variables received.
+         */
+        $actions = new class {
+            public $items = [];
+            public function add($name, $callable) {
+                $this->items[$name][] = $callable;
+            }
+        };
+
+        // Variable name to use for routing.
+        $varName = 'test_var_' . rand(1,100);
+
+        // do addRoute and registerRoutes routine.
+        $router = (new Router(
+            $wp_rewrite,
+            $wp_query,
+            $varName
+        ))->addActions([$actions, 'add']);
+
+        $this->assertArrayHasKey('pre_get_posts', $actions->items);
+        $this->assertContainsEquals([$router, 'handlePreGetPosts'], $actions->items['pre_get_posts'],
+            'addActions should add method "handlePreGetPosts" to action hook "pre_get_posts"');
     }
 
     public function testAddFilters()
@@ -123,8 +164,8 @@ class RouterTest extends TestCase
                 $varName,
                 'template'
             ))
-            ->addRoute('mycontents$', fn() => null)
-            ->addRoute('mymemories/(\d+)$', fn() => null, ['mid' => '$matches[0]'])
+            ->add(new Route('mycontents$', fn() => null))
+            ->add(new Route('mymemories/(\d+)$', fn() => null, ['mid' => '$matches[0]']))
             ->registerRoutes();
 
         $this->assertSame(
@@ -202,25 +243,25 @@ class RouterTest extends TestCase
             $varName,
             'template'
         ))
-            ->addRoute('mycontents$', $handler1)
-            ->addRoute('mymemories/(\d+)$', $handler2, ['mid' => '$matches[0]'])
-            ->addRoute('cool$', $handler3, [], 'my-slug')
-            ->addRoute('coolToo$', $handler4, [], 'my-slug')
+            ->add(new Route('mycontents$', $handler1))
+            ->add(new Route('mymemories/(\d+)$', $handler2, ['mid' => '$matches[0]']))
+            ->add(new Route('cool$', $handler3, [], 'my-slug'))
+            ->add(new Route('coolToo$', $handler4, [], 'my-slug'))
             ->registerRoutes();
 
         $this->assertSame(
             $handler1,
-            $router->dispatch('route-1'),
+            $router->dispatch('route-1')->getCallable(),
             'dispatching the slug "route-1" should get callable $handler1'
         );
         $this->assertSame(
             $handler2,
-            $router->dispatch('route-2'),
+            $router->dispatch('route-2')->getCallable(),
             'dispatching the slug "route-2" should get callable $handler2'
         );
         $this->assertSame(
             $handler4,
-            $router->dispatch('my-slug'),
+            $router->dispatch('my-slug')->getCallable(),
             'dispatching the slug "my-slug" should get callable $handler4'
         );
     }

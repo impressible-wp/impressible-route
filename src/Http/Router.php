@@ -36,7 +36,7 @@ class Router
     /**
      * The array of routes to remember.
      *
-     * @var array
+     * @var Route[]
      */
     private $routes = [];
 
@@ -119,12 +119,31 @@ class Router
     }
 
     /**
+     * Add a route to the router.
+     *
+     * @param Route $route
+     *
+     * @return self
+     */
+    public function add(Route $route)
+    {
+        if (empty($route->getRouteSlug())) {
+            $n = sizeof($this->routes) + 1;
+            $route->setRouteSlug("route-{$n}");
+        }
+        $this->routes[$route->getRouteSlug()] = $route;
+        return $this;
+    }
+
+    /**
      * Add a route to this router.
      *
      * Route won't be effective until the registerRoutes() method is called.
      *
      * The $regex, $query and $after will be used by WP_Rewrite::add_rule()
      * (a.k.a. the add_rewrite_rule function).
+     *
+     * @deprecated v2.0  Use Router::add() instead.
      *
      * @param string      $regex      Regular express matches request against.
      *                                The string will be prefixed with '#^/*' and
@@ -158,14 +177,13 @@ class Router
         ?string $routeSlug = null,
         string $after = 'top'
     ) {
-        $n = sizeof($this->routes) + 1;
-        $this->routes[$routeSlug ?? "route-{$n}"] = [
+        return $this->add(new Route(
             $regex,
             $callable,
             $query,
-            $after,
-        ];
-        return $this;
+            $routeSlug,
+            $after
+        ));
     }
 
     /**
@@ -194,10 +212,13 @@ class Router
     {
         foreach ($this->routes as $routeSlug => $route) {
             // register routes
-            list($regex, $callable, $query, $after) = $route;
-            $this->extraQueryVars += array_keys($query); // whitelist the extra query parameter, if needed.
-            $query = [$this->queryVarName => $routeSlug] + $query;
-            $this->wpRewrite->add_rule($regex, $query, $after);
+            $this->extraQueryVars += array_keys($route->getQuery()); // whitelist the extra query parameter, if needed.
+            $route = $route->withQueryParam($this->queryVarName, $routeSlug);
+            $this->wpRewrite->add_rule(
+                ...$route
+                    ->withQueryParam($this->queryVarName, $routeSlug)
+                    ->getRewriteRuleParams()
+            );
         }
         return $this;
     }
@@ -227,6 +248,29 @@ class Router
         // Will handle the routing.
         $callable('template_include', [$this, 'handleRoute']);
 
+        return $this;
+    }
+
+    /**
+     * Add the methods of this router as proper action hooks
+     * to the current wordpress environment.
+     *
+     * Essential for pre_get_posts query rewrite.
+     *
+     * @param callable $callable Optional callable to add
+     *     hooks with. Default: 'add_action'.
+     *
+     * @return self
+     */
+    public function addActions($callable = 'add_action')
+    {
+        if (!is_callable($callable)) {
+            throw new \Exception(is_string($callable)
+                ? "unable to find function \"{$callable}\"."
+                : 'unable to use $callable as callable.');
+        }
+
+        $callable('pre_get_posts', [$this, 'handlePreGetPosts']);
         return $this;
     }
 
@@ -274,7 +318,7 @@ class Router
     {
         // If no route callback is found,
         // simply return the default $template.
-        if (($callable = $this->dispatch($this->getRouteSlug())) === null) {
+        if (($route = $this->dispatch($this->getRouteSlug())) === null) {
             return $template;
         }
 
@@ -285,10 +329,36 @@ class Router
         // Use the callback found to handle the request.
         // If it returns a string, assume it is template filename and pass along.
         // If it returns boolean false, assume it has already sent out response body and stop the PHP process.
-        if (($template = $this->handleResponse($callable($request))) === false) {
+        if (($template = $this->handleResponse($route->getCallable()($request))) === false) {
            exit();
         }
         return $template;
+    }
+
+    /**
+     * Implements pre_get_posts hook of Wordpress.
+     *
+     * Triggers side-effect to \WP_Query before getting post with it.
+     *
+     * @param \WP_Query $query
+     *
+     * @return void
+     */
+    public function handlePreGetPosts(\WP_Query $query)
+    {
+        // If no route callback is found,
+        // simply return the default $template.
+        if (($route = $this->dispatch($this->getRouteSlug())) === null) {
+            return;
+        }
+
+        // If there is no pre_get_posts callable on the route, do nothing.
+        if (($callable = $route->getPreGetPost()) === null) {
+            return;
+        }
+
+        // Run the hook callable.
+        $callable($query);
     }
 
     /**
@@ -307,17 +377,16 @@ class Router
      *
      * @param string|false  $slug  The current route slug to dispatch
      *
-     * @return callable|null  The callable for the slug, or null if none found.
+     * @return Route|null  The callable for the slug, or null if none found.
      */
-    public function dispatch($slug): ?callable
+    public function dispatch($slug): ?Route
     {
         // If slug query var do not exists, simply return null.
         if ($slug === false) {
             return null;
         }
         if (isset($this->routes[$slug])) {
-            list($regex, $callable, $query) = $this->routes[$slug];
-            return $callable;
+            return $this->routes[$slug];
         }
         return null;
     }

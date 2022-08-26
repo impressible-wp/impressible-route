@@ -50,16 +50,31 @@ function my_plugin_register_routes() {
          'my_plugin_route', // query parameter used for routing.
          __DIR__            // folder for Wordpress template.
       )
-      ->addRoute('mycontent$', [$controller, 'handleContentIndex']);
+      ->addRoute(new Route(
+        'mycontent$',
+        [$controller, 'handleContentIndex']
+      ));
       ->addRoute(
-         'mycontent/mymedia/(\d+)$',
-         [$controller, 'handleMediaEndpoint'],
-         // Define query arguments supplied to the global \WP_Query
-         // that will be passed to the controller method.
-         [
+        (new Route(
+          'mycontent/mymedia/(\d+)$',
+          [$controller, 'handleMediaEndpoint'],
+          // Define query arguments supplied to the global \WP_Query
+          // that will be passed to the controller method.
+          [
             'post_id' => '$matches[1]',
             'post_type' => 'mymedia',
-        ],
+          ],
+        ))->withPreGetPosts(function (\WP_Query $wpQuery) {
+          // Show all mymedia to the author (after login)
+          if (($userId = get_current_user_id()) != 0) {
+            $author = get_user_by('slug', $query->get('author_name'));
+            if ($userId === $author->ID) {
+              // Get post of all status to the post author.
+              $statuses = array_keys(get_post_statuses());
+              $query->set('post_status', $statuses);
+            }
+          }
+        })
       )
       // register the router methods to the Wordpress environment.
       ->register();
