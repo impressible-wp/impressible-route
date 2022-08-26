@@ -8,6 +8,7 @@ use PHPUnit\Framework\TestCase;
 
 /**
  * @covers \Impressible\ImpressibleRoute\Http\Router
+ * @covers \Impressible\ImpressibleRoute\Http\Route
  */
 class RouterTest extends TestCase
 {
@@ -49,8 +50,8 @@ class RouterTest extends TestCase
                 $varName,
                 'template'
             ))
-            ->addRoute('mycontents$', fn() => null)
-            ->addRoute('mymemories/(\d+)$', fn() => null, ['mid' => '$matches[0]'])
+            ->add(new Route('mycontents$', fn() => null))
+            ->add(new Route('mymemories/(\d+)$', fn() => null, ['mid' => '$matches[0]']))
             ->registerRoutes();
     }
 
@@ -123,8 +124,8 @@ class RouterTest extends TestCase
                 $varName,
                 'template'
             ))
-            ->addRoute('mycontents$', fn() => null)
-            ->addRoute('mymemories/(\d+)$', fn() => null, ['mid' => '$matches[0]'])
+            ->add(new Route('mycontents$', fn() => null))
+            ->add(new Route('mymemories/(\d+)$', fn() => null, ['mid' => '$matches[0]']))
             ->registerRoutes();
 
         $this->assertSame(
@@ -202,25 +203,25 @@ class RouterTest extends TestCase
             $varName,
             'template'
         ))
-            ->addRoute('mycontents$', $handler1)
-            ->addRoute('mymemories/(\d+)$', $handler2, ['mid' => '$matches[0]'])
-            ->addRoute('cool$', $handler3, [], 'my-slug')
-            ->addRoute('coolToo$', $handler4, [], 'my-slug')
+            ->add(new Route('mycontents$', $handler1))
+            ->add(new Route('mymemories/(\d+)$', $handler2, ['mid' => '$matches[0]']))
+            ->add(new Route('cool$', $handler3, [], 'my-slug'))
+            ->add(new Route('coolToo$', $handler4, [], 'my-slug'))
             ->registerRoutes();
 
         $this->assertSame(
             $handler1,
-            $router->dispatch('route-1'),
+            $router->dispatch('route-1')->getCallable(),
             'dispatching the slug "route-1" should get callable $handler1'
         );
         $this->assertSame(
             $handler2,
-            $router->dispatch('route-2'),
+            $router->dispatch('route-2')->getCallable(),
             'dispatching the slug "route-2" should get callable $handler2'
         );
         $this->assertSame(
             $handler4,
-            $router->dispatch('my-slug'),
+            $router->dispatch('my-slug')->getCallable(),
             'dispatching the slug "my-slug" should get callable $handler4'
         );
     }
