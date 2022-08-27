@@ -196,7 +196,8 @@ class Router
     {
         return $this
             ->registerRoutes()
-            ->addFilters();
+            ->addFilters()
+            ->addActions();
     }
 
     /**
