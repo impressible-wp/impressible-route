@@ -2,6 +2,8 @@
 
 namespace Impressible\ImpressibleRoute\Http;
 
+use Psr\Http\Message\ResponseInterface;
+
 /**
  * Represents a Wordpress response with query template.
  * Resolves the template by calling get_query_template().
@@ -9,8 +11,10 @@ namespace Impressible\ImpressibleRoute\Http;
  *
  * @see https://developer.wordpress.org/reference/functions/get_query_template/
  */
-class TemplatedResponse
+class TemplatedResponse implements ResponseInterface
 {
+
+    use NopResponseTrait;
 
     /**
      * Filename without extension.

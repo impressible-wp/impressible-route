@@ -4,6 +4,7 @@ namespace Impressible\ImpressibleRoute\Http;
 
 use GuzzleHttp\Psr7\ServerRequest;
 use Psr\Http\Message\ResponseInterface;
+use Psr\Http\Server\MiddlewareInterface;
 
 /**
  * This is a router-ish routing handler that rides on
@@ -53,6 +54,13 @@ class Router
      * @var \WP_Query
      */
     private $wpQuery;
+
+    /**
+     * The middleware stack to apply to the HTTP kernel.
+     *
+     * @var MiddlewareInterface[]
+     */
+    private $middlewares = [];
 
     /**
      * The plugin's template directory.
@@ -276,6 +284,20 @@ class Router
     }
 
     /**
+     * Add a middleware to the middleware stack for
+     * the HTTP kernel.
+     *
+     * @param MiddlewareInterface $middleware
+     *
+     * @return $this
+     */
+    public function useMiddleware(MiddlewareInterface $middleware)
+    {
+        $this->middlewares[] = $middleware;
+        return $this;
+    }
+
+    /**
      * Returns an array of variable to be whitelisted.
      * An implementation of Wordpress's query_vars filter.
      *
@@ -327,10 +349,16 @@ class Router
         $request = ServerRequest::fromGlobals()
             ->withAttribute('wp_query', $this->wpQuery);
 
+        // Initialize a PSR-15 compatible kernel with the given route.
+        $handler = new Kernel($route);
+        foreach ($this->middlewares as $middleware) {
+            $handler = $middleware->process($request, $handler);
+        }
+
         // Use the callback found to handle the request.
         // If it returns a string, assume it is template filename and pass along.
         // If it returns boolean false, assume it has already sent out response body and stop the PHP process.
-        if (($template = $this->handleResponse($route->getCallable()($request))) === false) {
+        if (($template = $this->handleResponse($handler->handle($request))) === false) {
            exit();
         }
         return $template;
