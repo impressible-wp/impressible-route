@@ -1,0 +1,20 @@
+{
+    "name": "impressible/impressible-example",
+    "description": "An example Wordpress plugin to show how to use impressible.",
+    "type": "wordpress-plugin",
+    "license": "MIT",
+    "autoload": {
+        "psr-4": {
+            "Impressible\\ImpressibleExample\\": "src/"
+        }
+    },
+    "authors": [
+        {
+            "name": "Koala Yeung",
+            "email": "koalay@gmail.com"
+        }
+    ],
+    "require": {
+        "impressible/impressible-route": "^2.0"
+    }
+}
