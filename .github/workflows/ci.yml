@@ -10,6 +10,11 @@ jobs:
   test:
     name: Test PHP ${{ matrix.php-version }}
     runs-on: ubuntu-latest
+    env:
+      XDEBUG_MODE: coverage
+      COMPOSER_ALLOW_SUPERUSER: 1
+      COMPOSER_NO_INTERACTION: 1
+      COMPOSER_MEMORY_LIMIT: -1
 
     strategy:
       matrix:
@@ -53,7 +58,7 @@ jobs:
         if: matrix.php-version == '8.1'
         uses: codecov/codecov-action@v5
         with:
-          file: coverage.xml
+          files: coverage.xml
           fail_ci_if_error: false
 
       - name: Archive test artifacts
