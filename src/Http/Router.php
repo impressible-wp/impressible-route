@@ -403,7 +403,7 @@ class Router
      *
      * @return string|false  String of the found slug, or false if not found.
      */
-    public function getRouteSlug()
+    protected function getRouteSlug()
     {
         return $this->wpQuery->get($this->queryVarName, false);
     }
@@ -416,7 +416,7 @@ class Router
      *
      * @return Route|null  The callable for the slug, or null if none found.
      */
-    public function dispatch($slug): ?Route
+    protected function dispatch($slug): ?Route
     {
         // If slug query var do not exists, simply return null.
         if ($slug === false) {
@@ -509,7 +509,7 @@ class Router
      *
      * @return string|null
      */
-    private static function suggestTemplateFilename(TemplatedResponse $response): ?string
+    protected static function suggestTemplateFilename(TemplatedResponse $response): ?string
     {
         return \function_exists('get_query_template')
             ? \get_query_template($response->getType(), $response->getTemplates())
