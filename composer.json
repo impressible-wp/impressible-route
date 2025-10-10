@@ -3,6 +3,7 @@
     "description": "A routing framework for coding modern PHP in Wordpress Plugin.",
     "type": "library",
     "license": "MIT",
+    "homepage": "https://github.com/impressible-wp/impressible-route",
     "autoload": {
         "psr-4": {
             "Impressible\\ImpressibleRoute\\": "src/"
