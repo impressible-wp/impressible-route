@@ -323,6 +323,8 @@ class Router
     }
 
     /**
+     * Implementation of Wordpress's 'template_include' filter.
+     *
      * Either print out response to php://output itself, or return
      * the full path to the template file.
      *
@@ -364,7 +366,7 @@ class Router
         // Use the callback found to handle the request.
         // If it returns a string, assume it is template filename and pass along.
         // If it returns boolean false, assume it has already sent out response body and stop the PHP process.
-        if (($template = $this->handleResponse($handler->handle($request))) === false) {
+        if (($template = $this->getTemplateOrEmitResponse($handler->handle($request))) === false) {
            exit();
         }
         return $template;
@@ -427,7 +429,7 @@ class Router
     }
 
     /**
-     * Implementation of Wordpress's 'template_include' filter.
+     * Helper function to handleRoute,
      *
      * If the response is a TemplatedResponse, will attempt to do normal Wordpress template
      * suggestion logic. If template is not found in the theme (child theme and parent theme),
@@ -440,14 +442,12 @@ class Router
      * If the response is a PSR ResponseInterface, will emit the response to php://output and
      * tell Wordpress to stop processing by returning false.
      *
-     * @see https://developer.wordpress.org/reference/hooks/template_include/
-     *
      * @param ResponseInterface|TemplatedResponse|string $response  Response from callback.
      *
      * @return string|false  The template string to use, or false if response
      *                       has been sent to php://output already.
      */
-    public function handleResponse($response)
+    protected function getTemplateOrEmitResponse($response)
     {
         // If this is a TemplatedResponse, that means the user attempt to use Wordpress
         // template logic to resolve the template file.

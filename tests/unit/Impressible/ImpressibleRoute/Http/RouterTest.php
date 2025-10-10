@@ -285,12 +285,17 @@ class RouterTest extends TestCase
             ->getMock();
 
         // Router to test with.
-        $router = (new Router(
+        $router = (new class (
             $wp_rewrite,
             $wp_query,
             'some_var_name',
             'template'
-        ));
+        ) extends Router {
+            public function getTemplateOrEmitResponse($response)
+            {
+                return parent::getTemplateOrEmitResponse($response);
+            }
+        });
 
         // Create response to test with.
         $expectedBody = 'This is a random response ' . rand(1, 100);
@@ -305,7 +310,7 @@ class RouterTest extends TestCase
 
         // Do handleResponse withing an output buffer.
         ob_start();
-        $return = $router->handleResponse($response);
+        $return = $router->getTemplateOrEmitResponse($response);
         $resultBody = ob_get_clean();
 
         $this->assertFalse($return, 'The return value of handleResponse shoudl be false');
@@ -349,19 +354,24 @@ class RouterTest extends TestCase
             ->getMock();
 
         // Router to test with.
-        $router = (new Router(
+        $router = (new class(
             $wp_rewrite,
             $wp_query,
             'some_var_name',
             'some/system/template-dir'
-        ));
+        ) extends Router {
+            public function getTemplateOrEmitResponse($response)
+            {
+                return parent::getTemplateOrEmitResponse($response);
+            }
+        });
 
         // Create response to test with.
         $response = new TemplatedResponse('my-template-file');
 
         // Do handleResponse withing an output buffer.
         ob_start();
-        $return = $router->handleResponse($response);
+        $return = $router->getTemplateOrEmitResponse($response);
         $bufferedOutput = ob_get_clean();
 
         $this->assertEquals('some/system/template-dir/my-template-file.php', $return, 'The return value of handleResponse should be the full path to the supposed template.');
