@@ -356,7 +356,7 @@ class Router
             ->withAttribute('wp_query', $this->wpQuery);
 
         // Initialize a PSR-15 compatible kernel with the given route.
-        $handler = new Kernel($route);
+        $handler = new RouteRequestHandler($route);
         foreach ($this->middlewares as $middleware) {
             $handler = $middleware->process($request, $handler);
         }

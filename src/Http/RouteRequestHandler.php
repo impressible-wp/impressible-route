@@ -9,7 +9,7 @@ use Psr\Http\Server\RequestHandlerInterface;
 /**
  * A PSR-15 compatible kernel for applying middleware.
  */
-class Kernel implements RequestHandlerInterface
+class RouteRequestHandler implements RequestHandlerInterface
 {
     /**
      * The route to handle request with.
