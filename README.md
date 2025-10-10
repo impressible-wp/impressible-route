@@ -28,14 +28,19 @@ Then this library is for you.
 
 ## How to Use This?
 
-When writing your plugin, add this hook implementation:
+### Step 1: Routing and Controller
+
+When writing your plugin, add these hook implementations:
 
 ```php
 use Impressible\ImpressibleRoute\Http\Router;
 use Impressible\ImpressibleRoute\LazyLoadObject;
 
-require __DIR__ . '/vendor/autoload.php';
+require_once __DIR__ . '/vendor/autoload.php';
 
+/**
+ * Register routes to the global WP_Rewrite object.
+ */
 function my_plugin_register_routes() {
    /**
     * @var \wpdb $wpdb
@@ -43,6 +48,7 @@ function my_plugin_register_routes() {
    global $wpdb;
 
    // Lazyload a MyController that, for demo purpose only, somehow need to use wpdb.
+   /** @var MyController $controller */
    $controller = new LazyLoadObject(fn() => new MyController($wpdb));
 
    // Create a router instance and register routes with it.
@@ -50,14 +56,16 @@ function my_plugin_register_routes() {
          'my_plugin_route', // query parameter used for routing.
          __DIR__            // folder for Wordpress template.
       )
+      // Example route 1
       ->addRoute(new Route(
         'mycontent$',
-        [$controller, 'handleContentIndex']
+        $controller->handleContentIndex(...)
       ));
+      // Example route 2
       ->addRoute(
         (new Route(
           'mycontent/mymedia/(\d+)$',
-          [$controller, 'handleMediaEndpoint'],
+          $controller->handleMediaEndpoint(...),
           // Define query arguments supplied to the global \WP_Query
           // that will be passed to the controller method.
           [
@@ -79,7 +87,22 @@ function my_plugin_register_routes() {
       // register the router methods to the Wordpress environment.
       ->register();
 }
-add_action('init', 'my_plugin_register_routes');
+add_action('init', my_plugin_register_routes(...));
+
+/**
+ * Flush route rewrites on installation.
+ * 
+ * @see https://developer.wordpress.org/reference/functions/register_post_type/#flushing-rewrite-on-activation
+ * @see https://developer.wordpress.org/reference/functions/flush_rewrite_rules/
+ */
+function my_plugin_rewrite_flush() {
+    // First, register the routes you define
+    my_plugin_register_routes();
+
+    // Then, update the .htaccess with the new rewrite rules set
+    flush_rewrite_rules();
+}
+register_activation_hook(__FILE__, my_plugin_rewrite_flush(...));
 ```
 
 In your Controller, you have the flexibility to do things in old-style
@@ -122,7 +145,38 @@ class MyController
 
 ```
 
-### Admin Interface Routing
+
+### Step 2: Update Wordpress setting to use your routes
+
+The routes might not work without proper configurations.
+
+You routes depends on:
+- Wordpress being setup with friendly URL (so that rewrite is enabled); and
+- Your latest routing rules is in the rewrite rules cache; and
+- For some setup, Wordpress to update .htaccess to notify Apache about the routing arrangements.
+
+The easiest way to ensure this is to:
+1. Go to `/wp-admin/options-permalink.php` of your Wordpress installation, and
+2. Make sure that *Permalink structure* is **NOT** set to *Plain*, and then
+3. Hit *Save Changes*
+
+Wordpress should then be ready to go with your routes.
+
+> ‼️**Important Note**‼️
+>
+> **EVERYTIME after you changed your routes**, you need to tell Wordpress to clear the rewrite rules cache.
+>
+> You may either:
+> - Go to `/wp-admin/options-permalink.php` of your Wordpress installation and just hit *Save Changes* or
+> - Manually call [flush_rewrite_rules](https://developer.wordpress.org/reference/functions/flush_rewrite_rules/). Using [wp cli](https://wp-cli.org/), you may run:
+>    ```bash
+>    wp eval "flush_rewrite_rules();"
+>    ```
+>
+> The rewrite rules cached will be flushed and .htaccess will be updated.
+
+
+### (Optional) Step 3: Admin Interface Routing
 
 We also support admin page routing in a similar manner with the "admin_menu" and
 "admin_init" hooks.
@@ -132,7 +186,7 @@ use Impressible\ImpressibleRoute\Http\AdminRouter;
 use Impressible\ImpressibleRoute\Http\AdminRoute;
 use Impressible\ImpressibleRoute\LazyLoadObject;
 
-require __DIR__ . '/vendor/autoload.php';
+require_once __DIR__ . '/vendor/autoload.php';
 
 function my_plugin_register_admin_routes() {
    /**
@@ -150,7 +204,7 @@ function my_plugin_register_admin_routes() {
         'My Section',
         'some-capability',
         'menu_slug_1',
-        [$controller, 'handleAdminSection'],
+        $controller->handleAdminSection(...),
         'icon-1',
         1 // position
       ))
@@ -160,13 +214,13 @@ function my_plugin_register_admin_routes() {
         'My Subection',
         'some-capability',
         'menu_slug_2',
-        [$controller, 'handleAdminSubection'],
+        $controller->handleAdminSubection(...),
         1 // position
       ));
       // register the router methods to the Wordpress environment.
       ->register();
 }
-add_action('admin_menu', 'my_plugin_register_admin_routes');
+add_action('admin_menu', my_plugin_register_admin_routes(...));
 ```
 
 In your MyAdminController, you have the flexibility:
