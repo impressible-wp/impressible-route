@@ -15,6 +15,20 @@
             "email": "koalay@gmail.com"
         }
     ],
+    "repositories": [
+        {
+            "type": "package",
+            "package": {
+                "name": "wordpress/wordpress",
+                "version": "6.8.3",
+                "type": "wordpress-core",
+                "dist": {
+                    "type": "zip",
+                    "url": "https://github.com/WordPress/WordPress/archive/refs/tags/6.8.3.zip"
+                }
+            }
+        }
+    ],
     "scripts": {
         "dev:download:wp": "./vendor/bin/wp core download --path=./test-wp",
         "test:acceptance": "",
@@ -32,10 +46,19 @@
         "psr/http-factory": "^1.0"
     },
     "require-dev": {
-        "wp-cli/wp-cli-bundle": "*",
-        "phpunit/php-code-coverage": "^9.2",
         "codeception/codeception": "^4.1",
         "codeception/module-asserts": "^1.0",
-        "codeception/module-phpbrowser": "^2.0"
+        "codeception/module-phpbrowser": "^2.0",
+        "phpunit/php-code-coverage": "^9.2",
+        "wp-cli/wp-cli-bundle": "*",
+        "wordpress/wordpress": "^6.8"
+    },
+    "autoload-dev": {
+        "files": [
+            "composer-dev-autoload.php",
+            "vendor/wordpress/wordpress/wp-includes/class-wp-query.php",
+            "vendor/wordpress/wordpress/wp-includes/class-wp-rewrite.php",
+            "vendor/wordpress/wordpress/wp-includes/functions.php"
+        ]
     }
 }
