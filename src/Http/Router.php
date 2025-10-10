@@ -328,7 +328,6 @@ class Router
      * Either print out response to php://output itself, or return
      * the full path to the template file.
      *
-     * An implementation of Wordpress's template_include filter.
      * Depends on registerRoute and keepQueryVar above to be
      * correctly added to appropriate Wordpress hooks.
      *
@@ -357,7 +356,7 @@ class Router
         $request = ServerRequest::fromGlobals()
             ->withAttribute('wp_query', $this->wpQuery);
 
-        // Initialize a PSR-15 compatible kernel with the given route.
+        // Initialize a PSR-15 compatible handler with the given route.
         $handler = new RouteRequestHandler($route);
         foreach ($this->middlewares as $middleware) {
             $handler = $middleware->process($request, $handler);
