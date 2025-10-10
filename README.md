@@ -1,14 +1,14 @@
 # Impressible Route
 
 
-[![CI][badge-ci]][link-ci] [![badge-coverage][badge-coverage]][link-coverage] [![Packagist][badge-packagist]][link-packagist]
+[![CI][badge-ci]][link-ci] [![Code Quality][badge-quality]][link-quality] [![Packagist][badge-packagist]][link-packagist]
 
 A routing framework for coding modern PHP in [Wordpress](https://wordpress.org/) Plugin.
 
-[badge-ci]: https://gitlab.com/impressible/impressible-route/badges/main/pipeline.svg?key_text=main
-[link-ci]: https://gitlab.com/impressible/impressible-route/-/pipelines?page=1&ref=main&scope=branches
-[badge-coverage]: https://gitlab.com/impressible/impressible-route/badges/main/coverage.svg
-[link-coverage]: https://gitlab.com/impressible/impressible-route
+[badge-ci]: https://github.com/impressible-wp/impressible-route/actions/workflows/ci.yml/badge.svg?branch=main
+[link-ci]: https://github.com/impressible-wp/impressible-route/actions/workflows/ci.yml?query=branch%3Amain++
+[badge-quality]: https://github.com/impressible-wp/impressible-route/actions/workflows/code-quality.yml/badge.svg?branch=main
+[link-quality]: https://github.com/impressible-wp/impressible-route/actions/workflows/code-quality.yml?query=branch%3Amain++
 [badge-packagist]: https://img.shields.io/packagist/v/impressible/impressible-route.svg
 [link-packagist]: https://packagist.org/packages/impressible/impressible-route
 
