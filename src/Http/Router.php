@@ -4,6 +4,7 @@ namespace Impressible\ImpressibleRoute\Http;
 
 use GuzzleHttp\Psr7\ServerRequest;
 use Psr\Http\Message\ResponseInterface;
+use Psr\Http\Server\MiddlewareInterface;
 
 /**
  * This is a router-ish routing handler that rides on
@@ -53,6 +54,13 @@ class Router
      * @var \WP_Query
      */
     private $wpQuery;
+
+    /**
+     * The middleware stack to apply to the HTTP kernel.
+     *
+     * @var MiddlewareInterface[]
+     */
+    private $middlewares = [];
 
     /**
      * The plugin's template directory.
@@ -230,6 +238,12 @@ class Router
      *
      * Essential for the query_vars based routing to work.
      *
+     * Add keepQueryVar method to 'query_vars' filter. And add
+     * handleRoute method to 'template_include' filter.
+     * 
+     * @see https://developer.wordpress.org/reference/hooks/query_vars/
+     * @see https://developer.wordpress.org/reference/hooks/template_include/
+     *
      * @param callable $callable (Optional) Specify the callable
      *     to add filters with. Default: 'add_filter'.
      *
@@ -276,6 +290,20 @@ class Router
     }
 
     /**
+     * Add a middleware to the middleware stack for
+     * the HTTP kernel.
+     *
+     * @param MiddlewareInterface $middleware
+     *
+     * @return $this
+     */
+    public function useMiddleware(MiddlewareInterface $middleware)
+    {
+        $this->middlewares[] = $middleware;
+        return $this;
+    }
+
+    /**
      * Returns an array of variable to be whitelisted.
      * An implementation of Wordpress's query_vars filter.
      *
@@ -295,6 +323,8 @@ class Router
     }
 
     /**
+     * Implementation of Wordpress's 'template_include' filter.
+     *
      * Either print out response to php://output itself, or return
      * the full path to the template file.
      *
@@ -327,10 +357,16 @@ class Router
         $request = ServerRequest::fromGlobals()
             ->withAttribute('wp_query', $this->wpQuery);
 
+        // Initialize a PSR-15 compatible kernel with the given route.
+        $handler = new RouteRequestHandler($route);
+        foreach ($this->middlewares as $middleware) {
+            $handler = $middleware->process($request, $handler);
+        }
+
         // Use the callback found to handle the request.
         // If it returns a string, assume it is template filename and pass along.
         // If it returns boolean false, assume it has already sent out response body and stop the PHP process.
-        if (($template = $this->handleResponse($route->getCallable()($request))) === false) {
+        if (($template = $this->getTemplateOrEmitResponse($handler->handle($request))) === false) {
            exit();
         }
         return $template;
@@ -367,7 +403,7 @@ class Router
      *
      * @return string|false  String of the found slug, or false if not found.
      */
-    public function getRouteSlug()
+    protected function getRouteSlug()
     {
         return $this->wpQuery->get($this->queryVarName, false);
     }
@@ -380,7 +416,7 @@ class Router
      *
      * @return Route|null  The callable for the slug, or null if none found.
      */
-    public function dispatch($slug): ?Route
+    protected function dispatch($slug): ?Route
     {
         // If slug query var do not exists, simply return null.
         if ($slug === false) {
@@ -393,15 +429,49 @@ class Router
     }
 
     /**
-     * Handle response from a route callback.
+     * Helper function to handleRoute,
+     *
+     * If the response is a TemplatedResponse, will attempt to do normal Wordpress template
+     * suggestion logic. If template is not found in the theme (child theme and parent theme),
+     * and if $templateDir is specified, will attempt to load template from there as fallback.
+     *
+     * So if your plugin has a template directory, you can put your templates there as the
+     * default template, then let users override them by putting templates of same name in
+     * their theme folder.
+     * 
+     * If the response is a PSR ResponseInterface, will emit the response to php://output and
+     * tell Wordpress to stop processing by returning false.
      *
      * @param ResponseInterface|TemplatedResponse|string $response  Response from callback.
      *
-     * @return string|false  The template string to use
+     * @return string|false  The template string to use, or false if response
+     *                       has been sent to php://output already.
      */
-    public function handleResponse($response)
+    protected function getTemplateOrEmitResponse($response)
     {
-        // If this is a PSR response, emit the response.
+        // If this is a TemplatedResponse, that means the user attempt to use Wordpress
+        // template logic to resolve the template file.
+        if ($response instanceof TemplatedResponse) {
+            // Find Wordpress suggested template file.
+            $wp_template = static::suggestTemplateFilename($response);
+            http_response_code($response->getStatusCode());
+
+            // If the template file suggested from Wordpress is a proper file,
+            // tell Wordpress to use it.
+            if (!empty($wp_template) && is_file($wp_template)) {
+                return $wp_template;
+            }
+
+            // Runs here only of no template is found in the theme folder.
+            // In this case, if template directory is specified, do extra template search to
+            // find the supposed fallback / default template.
+            if (!empty($this->templateDir)) {
+                return $this->templateDir . DIRECTORY_SEPARATOR . $response->getFilename();
+            }
+        }
+
+        // If this is a PSR response, emit the response directly.
+        // And tell Wordpress to stop processing by returning false.
         if ($response instanceof ResponseInterface) {
             $http_line = sprintf('HTTP/%s %s %s',
                 $response->getProtocolVersion(),
@@ -424,24 +494,26 @@ class Router
             return false;
         }
 
-        // Return the templated response.
-        if ($response instanceof TemplatedResponse) {
-            $wp_template = $response->getTemplate();
-            http_response_code($response->getStatusCode());
-
-            // Wordpress default template search behaviour.
-            if (!empty($wp_template) && is_file($wp_template)) {
-                return $wp_template;
-            }
-
-            // If template directory is specified, do extra template search.
-            if (!empty($this->templateDir)) {
-                return $this->templateDir . DIRECTORY_SEPARATOR . $response->getFilename();
-            }
-        }
-
         // For whatever else, return it as a string and exit Wordpress environment.
         echo (string) $response;
         return false;
     }
+
+    /**
+     * Suggest full path to template file for a given TemplatedResponse.
+     * 
+     * Uses get_query_template() from Wordpress core to find the specified template file
+     * from current theme (child theme and parent theme).
+     * 
+     * Returns null if get_query_template() is not a defined function.
+     *
+     * @return string|null
+     */
+    protected static function suggestTemplateFilename(TemplatedResponse $response): ?string
+    {
+        return \function_exists('get_query_template')
+            ? \get_query_template($response->getType(), $response->getTemplates())
+            : null;
+    }
+
 }
