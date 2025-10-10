@@ -238,6 +238,12 @@ class Router
      *
      * Essential for the query_vars based routing to work.
      *
+     * Add keepQueryVar method to 'query_vars' filter. And add
+     * handleRoute method to 'template_include' filter.
+     * 
+     * @see https://developer.wordpress.org/reference/hooks/query_vars/
+     * @see https://developer.wordpress.org/reference/hooks/template_include/
+     *
      * @param callable $callable (Optional) Specify the callable
      *     to add filters with. Default: 'add_filter'.
      *
@@ -421,15 +427,51 @@ class Router
     }
 
     /**
-     * Handle response from a route callback.
+     * Implementation of Wordpress's 'template_include' filter.
+     *
+     * If the response is a TemplatedResponse, will attempt to do normal Wordpress template
+     * suggestion logic. If template is not found in the theme (child theme and parent theme),
+     * and if $templateDir is specified, will attempt to load template from there as fallback.
+     *
+     * So if your plugin has a template directory, you can put your templates there as the
+     * default template, then let users override them by putting templates of same name in
+     * their theme folder.
+     * 
+     * If the response is a PSR ResponseInterface, will emit the response to php://output and
+     * tell Wordpress to stop processing by returning false.
+     *
+     * @see https://developer.wordpress.org/reference/hooks/template_include/
      *
      * @param ResponseInterface|TemplatedResponse|string $response  Response from callback.
      *
-     * @return string|false  The template string to use
+     * @return string|false  The template string to use, or false if response
+     *                       has been sent to php://output already.
      */
     public function handleResponse($response)
     {
-        // If this is a PSR response, emit the response.
+        // If this is a TemplatedResponse, that means the user attempt to use Wordpress
+        // template logic to resolve the template file.
+        if ($response instanceof TemplatedResponse) {
+            // Find Wordpress suggested template file.
+            $wp_template = static::suggestTemplateFilename($response);
+            http_response_code($response->getStatusCode());
+
+            // If the template file suggested from Wordpress is a proper file,
+            // tell Wordpress to use it.
+            if (!empty($wp_template) && is_file($wp_template)) {
+                return $wp_template;
+            }
+
+            // Runs here only of no template is found in the theme folder.
+            // In this case, if template directory is specified, do extra template search to
+            // find the supposed fallback / default template.
+            if (!empty($this->templateDir)) {
+                return $this->templateDir . DIRECTORY_SEPARATOR . $response->getFilename();
+            }
+        }
+
+        // If this is a PSR response, emit the response directly.
+        // And tell Wordpress to stop processing by returning false.
         if ($response instanceof ResponseInterface) {
             $http_line = sprintf('HTTP/%s %s %s',
                 $response->getProtocolVersion(),
@@ -452,24 +494,26 @@ class Router
             return false;
         }
 
-        // Return the templated response.
-        if ($response instanceof TemplatedResponse) {
-            $wp_template = $response->getTemplate();
-            http_response_code($response->getStatusCode());
-
-            // Wordpress default template search behaviour.
-            if (!empty($wp_template) && is_file($wp_template)) {
-                return $wp_template;
-            }
-
-            // If template directory is specified, do extra template search.
-            if (!empty($this->templateDir)) {
-                return $this->templateDir . DIRECTORY_SEPARATOR . $response->getFilename();
-            }
-        }
-
         // For whatever else, return it as a string and exit Wordpress environment.
         echo (string) $response;
         return false;
     }
+
+    /**
+     * Suggest full path to template file for a given TemplatedResponse.
+     * 
+     * Uses get_query_template() from Wordpress core to find the specified template file
+     * from current theme (child theme and parent theme).
+     * 
+     * Returns null if get_query_template() is not a defined function.
+     *
+     * @return string|null
+     */
+    private static function suggestTemplateFilename(TemplatedResponse $response): ?string
+    {
+        return \function_exists('get_query_template')
+            ? \get_query_template($response->getType(), $response->getTemplates())
+            : null;
+    }
+
 }

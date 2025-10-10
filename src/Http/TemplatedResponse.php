@@ -55,6 +55,26 @@ class TemplatedResponse implements ResponseInterface
     }
 
     /**
+     * Get the template type.
+     *
+     * @return string
+     */
+    public function getType(): string
+    {
+        return $this->type;
+    }
+
+    /**
+     * Get the list of template candidates.
+     *
+     * @return string[]
+     */
+    public function getTemplates(): array
+    {
+        return $this->templates;
+    }
+
+    /**
      * Returns a full path to template file from get_query_template().
      * Or null if get_query_template() is not a defined function.
      *
