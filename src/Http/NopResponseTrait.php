@@ -36,7 +36,7 @@ trait NopResponseTrait
      * @see method throwNoOpException.
      */
     public function getProtocolVersion() {
-        $this->throwNoOpException();
+        return '1.1';
     }
 
     /**
