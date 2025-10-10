@@ -55,6 +55,7 @@
     },
     "autoload-dev": {
         "files": [
+            "composer-dev-autoload.php",
             "vendor/wordpress/wordpress/wp-includes/class-wp-query.php",
             "vendor/wordpress/wordpress/wp-includes/class-wp-rewrite.php",
             "vendor/wordpress/wordpress/wp-includes/functions.php"
