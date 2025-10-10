@@ -49,7 +49,7 @@ class TemplatedResponse implements ResponseInterface
      *
      * @return integer
      */
-    function getStatusCode(): int
+    public function getStatusCode(): int
     {
         return 200;
     }
@@ -72,7 +72,7 @@ class TemplatedResponse implements ResponseInterface
      *
      * @return string
      */
-    function getFilename(): string
+    public function getFilename(): string
     {
         return $this->type . '.php';
     }
