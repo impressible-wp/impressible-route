@@ -1,0 +1,35 @@
+{
+    "name": "impressible/impressible-example",
+    "description": "An example Wordpress plugin to show how to use impressible.",
+    "type": "wordpress-plugin",
+    "license": "MIT",
+    "autoload": {
+        "psr-4": {
+            "Impressible\\ImpressibleExample\\": "src/"
+        }
+    },
+    "authors": [
+        {
+            "name": "Koala Yeung",
+            "email": "koalay@gmail.com"
+        }
+    ],
+    "scripts": {
+        "test": "codecept run"
+    },
+    "require": {
+        "impressible/impressible-route": "*"
+    },
+    "repositories": {
+        "impressible": {
+            "type": "path",
+            "url": ".."
+        }
+    },
+    "require-dev": {
+        "codeception/codeception": "^5.3",
+        "codeception/module-webdriver": "^4.0",
+        "codeception/module-asserts": "^3.2"
+    },
+    "minimum-stability": "dev"
+}

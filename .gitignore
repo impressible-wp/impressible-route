@@ -13,3 +13,6 @@
 # Ignore coverage reports
 /coverage.xml
 /coverage.txt
+
+# Ignore temp folder
+/temp

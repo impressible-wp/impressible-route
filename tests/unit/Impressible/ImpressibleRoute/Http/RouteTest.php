@@ -61,31 +61,41 @@ class RouteTest extends TestCase
 
     public function testWithQueryParam()
     {
-        $key = 'key-' . rand(1, 100);
-        $value = 'value-' . rand(1, 100);
+        $key1 = 'key-' . rand(1, 100);
+        $key2 = 'key-' . rand(1, 100);
+        while ($key2 === $key1) {
+            // Ensure key2 is different from key1.
+            $key2 = 'key-' . rand(1, 100);
+        }
+        $value1 = 'value-' . rand(1, 100);
+        $value2 = 'value-' . rand(1, 100);
 
         $regex = 'regex-' . rand(1, 100);
         $callable = fn() => null;
-        $query1 = ['key-' . rand(1, 100) => 'value-' . rand(1, 100)];
-        $query2 = $query1 + [$key => $value];
         $routeSlug = 'route-slug-' . rand(1, 100);
         $after = 'after-' . rand(1, 100);
 
         $route1 = new Route(
             $regex,
             $callable,
-            $query1,
+            [$key1 => $value1],
             $routeSlug,
             $after
         );
-        $route2 = $route1->withQueryParam($key, $value);
+        $route2 = $route1->withQueryParam($key2, $value2);
 
         // Check query2 changed and query1 not affected.
-        $this->assertEquals($query1, $route1->getQuery());
-        $this->assertEquals($query2, $route2->getQuery());
+        $this->assertEquals([$key1 => $value1], $route1->getQuery());
+        $this->assertEquals(
+            [$key1 => $value1, $key2 => $value2],
+            $route2->getQuery(),
+        );
 
         // Check query2 retains query1 values.
-        $this->assertEquals([$regex, $query2, $after], $route2->getRewriteRuleParams());
+        $this->assertEquals(
+            [$regex, [$key1 => $value1, $key2 => $value2], $after],
+            $route2->getRewriteRuleParams(),
+        );
         $this->assertEquals($routeSlug, $route2->getRouteSlug());
         $this->assertSame($callable, $route2->getCallable());
     }

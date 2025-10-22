@@ -1,0 +1,101 @@
+name: Acceptance Tests
+
+on:
+  pull_request:
+    branches: [main]
+env:
+  # The hostname should match the MySQL / MariaDB
+  # service name defined below
+  DB_HOST: mysql
+  DB_NAME: wordpress
+  DB_USER: username
+  DB_PASSWORD: password
+
+jobs:
+  test-action:
+    name: Example Action
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mariadb:12
+        env:
+          MARIADB_RANDOM_ROOT_PASSWORD: 'yes'
+          MARIADB_DATABASE: ${{ env.DB_NAME }}
+          MARIADB_USER: ${{ env.DB_USER }}
+          MARIADB_PASSWORD: ${{ env.DB_PASSWORD }}
+        ports:
+          - 3306:3306
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Setup Chrome for webdriver-based testing
+        uses: browser-actions/setup-chrome@v2
+
+      - name: Setup Chrome Driver for webdriver-based testing
+        uses: nanasess/setup-chromedriver@v2
+
+      - name: Ensure the Test Output folder exists
+        run: mkdir -p example/tests/_output
+
+      - name: Start Chrome Driver process in background
+        run: chromedriver --port=4444 >example/tests/_output/chromedriver.log 2>&1 &
+
+      # Make a copy of the plugin to be mapped into wordpress-ci container
+      # Leave the original plugin folder intact for other steps
+      - name: Make a copy of the example plugin for test
+        run: |
+          mkdir ./temp
+          cp -Rpdf ./example ./temp/example
+
+      - name: Test
+        uses: impressible-wp/wordpress-ci@v1
+        with:
+          # Change the plugin and theme path to
+          # the ones that match location in your repository
+          plugins: ./temp/example
+          db-host: ${{ env.DB_HOST }}
+          db-name: ${{ env.DB_NAME }}
+          db-user: ${{ env.DB_USER }}
+          db-password: ${{ env.DB_PASSWORD }}
+          test-command: |
+
+            # Ensure web server logs are captured in the background
+            docker logs wordpress-ci > example/tests/_output/wordpress-ci.log 2>&1 &
+
+            # Copy the latest source code into the Wordpress CI container
+            docker cp $(pwd) wordpress-ci:/usr/src/impressible-route
+            wpci-cmd ls -la /usr/src/impressible-route
+
+            # Setup the example plugin to use the latest so urce code of impressible-route
+            # and then install dependencies in the Wordpress CI container to match
+            # the "hosting" envrionment.
+            wpci-cmd composer -d ./plugins/example config repo.impressible path /usr/src/impressible-route
+            wpci-cmd composer -d ./plugins/example config "minimum-stability" "dev"
+            wpci-cmd composer -d ./plugins/example -n require impressible/impressible-route:*
+            wpci-cmd cat ./plugins/example/composer.json
+            wpci-cmd composer -d ./plugins/example -n install --no-dev
+
+            # Setup Wordpress to activate the example plugin
+            wpci-cmd wp rewrite structure '/%postname%/'
+            wpci-cmd wp plugin activate example
+
+            # Regenerate .htaccess rules
+            wpci-cmd wp rewrite flush --hard
+            wpci-cmd ls -la /var/www/html/
+
+            # Your test may access the Wordpress CI's URL with this environment variable
+            echo "Wordpress is accessible here: $WORDPRESS_CI_URL"
+
+            # Running "client-side" commands in GitHub Actions runner
+            # with development dependencies (for testing)
+            cd ./example
+            composer install
+            composer run test
+
+      - name: Store Acceptance Test Output if test failed
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: acceptance-test-output
+          path: example/tests/_output/
