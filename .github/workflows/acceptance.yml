@@ -3,13 +3,6 @@ name: Acceptance Tests
 on:
   pull_request:
     branches: [main]
-env:
-  # The hostname should match the MySQL / MariaDB
-  # service name defined below
-  DB_HOST: mysql
-  DB_NAME: wordpress
-  DB_USER: username
-  DB_PASSWORD: password
 
 jobs:
   test-action:
@@ -20,9 +13,10 @@ jobs:
         image: mariadb:12
         env:
           MARIADB_RANDOM_ROOT_PASSWORD: 'yes'
-          MARIADB_DATABASE: ${{ env.DB_NAME }}
-          MARIADB_USER: ${{ env.DB_USER }}
-          MARIADB_PASSWORD: ${{ env.DB_PASSWORD }}
+          # These are the database credentials used by wordpress-ci
+          MARIADB_DATABASE: wordpress
+          MARIADB_USER: username
+          MARIADB_PASSWORD: password
         ports:
           - 3306:3306
     steps:
@@ -54,10 +48,10 @@ jobs:
           # Change the plugin and theme path to
           # the ones that match location in your repository
           plugins: ./temp/example
-          db-host: ${{ env.DB_HOST }}
-          db-name: ${{ env.DB_NAME }}
-          db-user: ${{ env.DB_USER }}
-          db-password: ${{ env.DB_PASSWORD }}
+
+          # Database host is the name of the service defined above
+          db-host: mysql
+
           test-command: |
 
             # Ensure web server logs are captured in the background
